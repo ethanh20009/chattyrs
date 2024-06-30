@@ -34,12 +34,18 @@ impl EventHandler for Handler {
                 _ => Err(commands::error::Error::CommandNotImplemented),
             };
 
-            if let Ok(reply) = content {
-                let data = CreateInteractionResponseMessage::new().content(reply);
-                let builder = CreateInteractionResponse::Message(data);
-                if let Err(why) = command.create_response(&ctx.http, builder).await {
-                    println!("Sending command response failed {why:?}");
+            let data = match content {
+                Ok(reply) => CreateInteractionResponseMessage::new().content(reply),
+                Err(err) => {
+                    println!("Interaction execution failed, reason: {}", err);
+                    CreateInteractionResponseMessage::new()
+                        .content("Command failed to execute, please try again later")
                 }
+            };
+
+            let builder = CreateInteractionResponse::Message(data);
+            if let Err(why) = command.create_response(&ctx.http, builder).await {
+                println!("Sending command response failed {why:?}");
             }
         }
     }

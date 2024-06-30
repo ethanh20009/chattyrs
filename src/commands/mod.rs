@@ -1,0 +1,9 @@
+mod ask;
+
+use serenity::all::CreateCommand;
+
+use crate::{commands::ask::register_ask, environment::Environment};
+
+pub fn get_commands(environment: &Environment) -> Vec<CreateCommand> {
+    vec![register_ask(environment)]
+}

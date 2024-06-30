@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serenity = "0.12.2"
+serenity = { version = "0.12.2", features = ["model"] }
 tokio = { version = "1.38.0", features = ["rt-multi-thread", "macros"] }
 thiserror = { version = "1.0.61" }
 config = { version = "0.14.0" }

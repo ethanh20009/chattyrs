@@ -1,8 +1,10 @@
-use chattyrs::environment::get_environment;
-use serenity::async_trait;
+use chattyrs::commands::get_commands;
+use chattyrs::environment::{get_environment, Environment};
+use serenity::all::ApplicationId;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
+use serenity::{async_trait, http};
 
 struct Handler;
 
@@ -33,6 +35,17 @@ impl EventHandler for Handler {
     }
 }
 
+async fn setup_slash_commands(environment: &Environment) {
+    let http_serenity = http::Http::new(&environment.discord_token);
+    http_serenity.set_application_id(ApplicationId::new(1256701007249936568));
+    serenity::model::application::Command::set_global_commands(
+        http_serenity,
+        get_commands(environment),
+    )
+    .await
+    .expect("Failed to set global commands");
+}
+
 #[tokio::main]
 async fn main() {
     // Configure the client with your Discord bot token in the environment.
@@ -48,6 +61,8 @@ async fn main() {
         .event_handler(Handler)
         .await
         .expect("Err creating client");
+
+    setup_slash_commands(&environment).await;
 
     // Finally, start a single shard, and start listening to events.
     //

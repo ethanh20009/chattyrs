@@ -6,6 +6,7 @@ use super::error::Result;
 #[derive(Debug, Deserialize)]
 pub struct Environment {
     pub discord_token: String,
+    pub bot_name: String,
 }
 
 pub fn get_environment() -> Result<Environment> {

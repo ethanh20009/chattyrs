@@ -1,8 +1,10 @@
-use chattyrs::commands::get_commands;
+use chattyrs::commands::error::Result;
+use chattyrs::commands::{self, get_commands, run_ask};
 use chattyrs::environment::{get_environment, Environment};
-use serenity::all::ApplicationId;
+use serenity::all::{ApplicationId, CreateInteractionResponse, CreateInteractionResponseMessage};
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
+use serenity::model::prelude::Interaction;
 use serenity::prelude::*;
 use serenity::{async_trait, http};
 
@@ -21,6 +23,23 @@ impl EventHandler for Handler {
             // with a description of it.
             if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
                 println!("Error sending message: {why:?}");
+            }
+        }
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if let Interaction::Command(command) = interaction {
+            let content: Result<String> = match command.data.name.as_str() {
+                "ask" => run_ask(&command.data.options()),
+                _ => Err(commands::error::Error::CommandNotImplemented),
+            };
+
+            if let Ok(reply) = content {
+                let data = CreateInteractionResponseMessage::new().content(reply);
+                let builder = CreateInteractionResponse::Message(data);
+                if let Err(why) = command.create_response(&ctx.http, builder).await {
+                    println!("Sending command response failed {why:?}");
+                }
             }
         }
     }

@@ -1,7 +1,4 @@
-pub mod environment;
-pub mod error;
-
-use environment::get_environment;
+use chattyrs::environment::get_environment;
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;

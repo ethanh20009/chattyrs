@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use serde::Deserialize;
 
-use crate::error::Result;
+use super::error::Result;
 
 #[derive(Debug, Deserialize)]
 pub struct Environment {

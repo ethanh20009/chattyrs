@@ -1,14 +1,20 @@
 use chattyrs::commands::error::Result;
 use chattyrs::commands::{self, get_commands, run_ask};
 use chattyrs::environment::{get_environment, Environment};
-use serenity::all::{ApplicationId, CreateInteractionResponse, CreateInteractionResponseMessage};
+use chattyrs::llm::engine::LlmEngine;
+use serenity::all::{
+    ApplicationId, CommandInteraction, CreateInteractionResponse,
+    CreateInteractionResponseFollowup, CreateInteractionResponseMessage,
+};
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::model::prelude::Interaction;
 use serenity::prelude::*;
 use serenity::{async_trait, http};
 
-struct Handler;
+struct Handler {
+    llm_engine: LlmEngine,
+}
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -30,22 +36,41 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
             let content: Result<String> = match command.data.name.as_str() {
-                "ask" => run_ask(&command.data.options()),
+                "ask" => {
+                    if let Err(why) = command
+                        .create_response(
+                            &ctx,
+                            CreateInteractionResponse::Defer(
+                                CreateInteractionResponseMessage::new()
+                                    .content("Working on my response. Please wait"),
+                            ),
+                        )
+                        .await
+                    {
+                        println!("Failed to defer ask {why:?}");
+                    }
+                    run_ask(&command.data.options(), &self.llm_engine).await
+                }
                 _ => Err(commands::error::Error::CommandNotImplemented),
             };
 
-            let data = match content {
-                Ok(reply) => CreateInteractionResponseMessage::new().content(reply),
+            let response_message = match &content {
+                Ok(reply) => reply,
                 Err(err) => {
                     println!("Interaction execution failed, reason: {}", err);
-                    CreateInteractionResponseMessage::new()
-                        .content("Command failed to execute, please try again later")
+                    "Command failed to execute, please try again later"
                 }
             };
 
-            let builder = CreateInteractionResponse::Message(data);
-            if let Err(why) = command.create_response(&ctx.http, builder).await {
+            if let Err(why) = self
+                .send_message_in_chunks(response_message, &command, &ctx)
+                .await
+            {
                 println!("Sending command response failed {why:?}");
+                if let SerenityError::Model(ModelError::MessageTooLong(size)) = why {
+                    println!("size: {}, {}", size, content.unwrap_or("".to_string()))
+                }
+                let _ = command.delete_response(&ctx.http).await;
             }
         }
     }
@@ -57,6 +82,32 @@ impl EventHandler for Handler {
     // In this case, just print what the current user's username is.
     async fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
+    }
+}
+
+impl Handler {
+    fn new(environment: &Environment) -> std::result::Result<Handler, chattyrs::error::Error> {
+        Ok(Handler {
+            llm_engine: LlmEngine::new(environment)?,
+        })
+    }
+
+    async fn send_message_in_chunks(
+        &self,
+        message: &str,
+        command: &CommandInteraction,
+        ctx: &Context,
+    ) -> std::result::Result<(), serenity::Error> {
+        let messages: Vec<&str> = message.split("\n\n").collect();
+
+        for message in messages {
+            if message.chars().count() > 0 {
+                let data = CreateInteractionResponseFollowup::new().content(message);
+                command.create_followup(&ctx.http, data).await?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -83,7 +134,7 @@ async fn main() {
     // Create a new instance of the Client, logging in as a bot. This will automatically prepend
     // your bot token with "Bot ", which is a requirement by Discord for bot users.
     let mut client = Client::builder(&environment.discord_token, intents)
-        .event_handler(Handler)
+        .event_handler(Handler::new(&environment).expect("Failed to create handler"))
         .await
         .expect("Err creating client");
 

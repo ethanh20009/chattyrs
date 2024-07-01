@@ -1,3 +1,5 @@
+use crate::llm;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
@@ -7,4 +9,6 @@ pub enum Error {
         #[from]
         source: config::ConfigError,
     },
+    #[error("Llm engine failed")]
+    Llm(#[from] llm::error::Error),
 }

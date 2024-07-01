@@ -2,7 +2,10 @@ use serenity::all::{
     CommandOptionType, CreateCommand, CreateCommandOption, ResolvedOption, ResolvedValue,
 };
 
-use crate::environment::Environment;
+use crate::{
+    environment::Environment,
+    llm::{self, engine::LlmEngine},
+};
 
 use super::error::Result;
 
@@ -22,12 +25,19 @@ pub fn register_ask(environment: &Environment) -> CreateCommand {
             .required(true),
         )
 }
-pub fn run_ask(options: &[ResolvedOption]) -> Result<String> {
+pub async fn run_ask<'a>(
+    options: &'a [ResolvedOption<'_>],
+    llm_engine: &'a LlmEngine,
+) -> Result<String> {
     let question_response = &options.first().ok_or(Error::MissingQuestion)?.value;
     match question_response {
         ResolvedValue::String(question) => Ok(format!(
             "Question: {}\n\n{}",
-            question, "I don't think anything yet"
+            question,
+            llm_engine
+                .get_completion(question)
+                .await
+                .map_err(Error::from)?
         )),
         _ => Err(Error::MissingQuestion.into()),
     }
@@ -39,4 +49,6 @@ pub enum Error {
     Unanswerable,
     #[error("Missing question")]
     MissingQuestion,
+    #[error("Failed to get completion from Llm Engine")]
+    LlmEngineCompletionFailed(#[from] llm::error::Error),
 }

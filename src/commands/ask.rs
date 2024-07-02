@@ -34,7 +34,7 @@ pub async fn run_ask<'a>(
         ResolvedValue::String(question) => Ok((llm_engine
             .get_completion(question)
             .await
-            .map(|llm_response| format!("Question:{question}\n{llm_response}"))
+            .map(|llm_response| format!("**Question**: *{question}*\n{llm_response}"))
             .map_err(Error::from)?)
         .to_string()),
         _ => Err(Error::MissingQuestion.into()),

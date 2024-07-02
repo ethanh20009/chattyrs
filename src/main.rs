@@ -126,6 +126,7 @@ async fn setup_slash_commands(environment: &Environment) {
 async fn main() {
     // Configure the client with your Discord bot token in the environment.
     let environment = get_environment().unwrap();
+    println!("Loaded environment {environment:?}");
     // Set gateway intents, which decides what events the bot will be notified about
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES

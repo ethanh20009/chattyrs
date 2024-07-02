@@ -31,14 +31,12 @@ pub async fn run_ask<'a>(
 ) -> Result<String> {
     let question_response = &options.first().ok_or(Error::MissingQuestion)?.value;
     match question_response {
-        ResolvedValue::String(question) => Ok(format!(
-            "Question: {}\n\n{}",
-            question,
-            llm_engine
-                .get_completion(question)
-                .await
-                .map_err(Error::from)?
-        )),
+        ResolvedValue::String(question) => Ok((llm_engine
+            .get_completion(question)
+            .await
+            .map(|llm_response| format!("Question:{question}\n{llm_response}"))
+            .map_err(Error::from)?)
+        .to_string()),
         _ => Err(Error::MissingQuestion.into()),
     }
 }
@@ -49,6 +47,6 @@ pub enum Error {
     Unanswerable,
     #[error("Missing question")]
     MissingQuestion,
-    #[error("Failed to get completion from Llm Engine")]
+    #[error("Failed to get completion from Llm Engine, {0})")]
     LlmEngineCompletionFailed(#[from] llm::error::Error),
 }

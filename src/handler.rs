@@ -37,18 +37,7 @@ impl EventHandler for Handler {
         if let Interaction::Command(command) = interaction {
             let content: Result<String> = match command.data.name.as_str() {
                 "ask" => {
-                    if let Err(why) = command
-                        .create_response(
-                            &ctx,
-                            CreateInteractionResponse::Defer(
-                                CreateInteractionResponseMessage::new()
-                                    .content("Working on my response. Please wait"),
-                            ),
-                        )
-                        .await
-                    {
-                        println!("Failed to defer ask {why:?}");
-                    }
+                    self.send_defer_message(&command, &ctx).await;
                     run_ask(&command.data.options(), &self.llm_engine).await
                 }
                 _ => Err(Error::CommandNotImplemented),
@@ -108,5 +97,20 @@ impl Handler {
         }
 
         Ok(())
+    }
+
+    async fn send_defer_message(&self, command: &CommandInteraction, ctx: &Context) {
+        if let Err(why) = command
+            .create_response(
+                &ctx,
+                CreateInteractionResponse::Defer(
+                    CreateInteractionResponseMessage::new()
+                        .content("Working on my response. Please wait"),
+                ),
+            )
+            .await
+        {
+            println!("Failed to defer ask {why:?}");
+        }
     }
 }

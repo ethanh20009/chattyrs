@@ -1,3 +1,6 @@
 [llm]
 model = "llama3"
-base_url = "http://localhost:11434/api/generate"
+base_url = "http://localhost:11434/api"
+
+[memory]
+max_message_count = 20

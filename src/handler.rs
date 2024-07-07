@@ -1,12 +1,15 @@
+use crate::{commands::run_ask, llm::engine::LlmEngine};
 use crate::{
-    commands::error::{Error, Result},
+    commands::{
+        error::{Error, Result},
+        weigh_in::run_weigh_in,
+    },
     environment::Environment,
 };
-use crate::{commands::run_ask, llm::engine::LlmEngine};
 use serenity::{
     all::{
         CommandInteraction, Context, CreateInteractionResponse, CreateInteractionResponseFollowup,
-        CreateInteractionResponseMessage, EventHandler, Interaction, Message, Ready,
+        CreateInteractionResponseMessage, EventHandler, Http, Interaction, Ready,
     },
     async_trait,
     prelude::*,
@@ -14,6 +17,8 @@ use serenity::{
 
 pub struct Handler {
     llm_engine: LlmEngine,
+    http_client: serenity::http::Http,
+    environment: Environment,
 }
 
 #[async_trait]
@@ -22,16 +27,7 @@ impl EventHandler for Handler {
     //
     // Event handlers are dispatched through a threadpool, and so multiple events can be
     // dispatched simultaneously.
-    async fn message(&self, ctx: Context, msg: Message) {
-        if msg.content == "!ping" {
-            // Sending a message can fail, due to a network error, an authentication error, or lack
-            // of permissions to post in the channel, so log to stdout when some error happens,
-            // with a description of it.
-            if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
-                println!("Error sending message: {why:?}");
-            }
-        }
-    }
+    // async fn message(&self, ctx: Context, msg: Message) {}
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
@@ -39,6 +35,16 @@ impl EventHandler for Handler {
                 "ask" => {
                     self.send_defer_message(&command, &ctx).await;
                     run_ask(&command.data.options(), &self.llm_engine).await
+                }
+                "weigh-in" => {
+                    self.send_defer_message(&command, &ctx).await;
+                    run_weigh_in(
+                        &command,
+                        &self.llm_engine,
+                        &self.http_client,
+                        &self.environment,
+                    )
+                    .await
                 }
                 _ => Err(Error::CommandNotImplemented),
             };
@@ -75,9 +81,14 @@ impl EventHandler for Handler {
 }
 
 impl Handler {
-    pub fn new(environment: &Environment) -> std::result::Result<Handler, crate::error::Error> {
+    pub fn new(
+        environment: &Environment,
+        http_client: Http,
+    ) -> std::result::Result<Handler, crate::error::Error> {
         Ok(Handler {
             llm_engine: LlmEngine::new(environment)?,
+            http_client,
+            environment: environment.clone(),
         })
     }
 

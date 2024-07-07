@@ -5,15 +5,16 @@ use serenity::all::ApplicationId;
 use serenity::http;
 use serenity::prelude::*;
 
-async fn setup_slash_commands(environment: &Environment) {
+async fn setup_slash_commands(environment: &Environment) -> http::Http {
     let http_serenity = http::Http::new(&environment.discord_token);
     http_serenity.set_application_id(ApplicationId::new(1256701007249936568));
     serenity::model::application::Command::set_global_commands(
-        http_serenity,
+        &http_serenity,
         get_commands(environment),
     )
     .await
     .expect("Failed to set global commands");
+    http_serenity
 }
 
 #[tokio::main]
@@ -26,14 +27,14 @@ async fn main() {
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
+    let http = setup_slash_commands(&environment).await;
+
     // Create a new instance of the Client, logging in as a bot. This will automatically prepend
     // your bot token with "Bot ", which is a requirement by Discord for bot users.
     let mut client = Client::builder(&environment.discord_token, intents)
-        .event_handler(Handler::new(&environment).expect("Failed to create handler"))
+        .event_handler(Handler::new(&environment, http).expect("Failed to create handler"))
         .await
         .expect("Err creating client");
-
-    setup_slash_commands(&environment).await;
 
     // Finally, start a single shard, and start listening to events.
     //

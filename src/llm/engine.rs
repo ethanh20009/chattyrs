@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use super::error::{Error, Result};
+use super::{
+    error::{Error, Result},
+    model::{AssistantMessage, LlmChat},
+};
 use reqwest::{Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -14,10 +17,17 @@ pub struct LlmEngine {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct LlmResponse {
+struct LlmCompletionResponse {
     model: String,
     created_at: String,
     response: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct LlmChatResponse {
+    model: String,
+    created_at: String,
+    message: AssistantMessage,
 }
 
 impl LlmEngine {
@@ -52,14 +62,39 @@ impl LlmEngine {
             }
         });
         self.http_client
-            .post(&self.base_url)
+            .post(self.base_url.clone() + "/generate")
             .json(&payload)
             .send()
             .await
             .map_err(|err| Error::HTTPRequestFailed(err.to_string()))?
-            .json::<LlmResponse>()
+            .json::<LlmCompletionResponse>()
             .await
             .map_err(|_| Error::HTTPResponseParseFailed)
             .map(|res| res.response)
+    }
+
+    pub async fn get_chat_completion(&self, messages: LlmChat) -> Result<String> {
+        let payload = json!({
+            "model": self.model,
+            "messages": messages,
+            "stream": false,
+            "options": {
+                "seed": 123,
+                "top_k": 20,
+                "top_p": 0.9,
+                "temperature": 0
+            }
+        });
+        println!("{}", payload);
+        self.http_client
+            .post(self.base_url.clone() + "/chat")
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|err| Error::HTTPRequestFailed(err.to_string()))?
+            .json::<LlmChatResponse>()
+            .await
+            .map_err(|_| Error::HTTPResponseParseFailed)
+            .map(|res| res.message.content)
     }
 }

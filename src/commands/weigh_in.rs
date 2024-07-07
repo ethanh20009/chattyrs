@@ -1,3 +1,5 @@
+use std::convert::identity;
+
 use serenity::all::{CommandInteraction, CreateCommand};
 
 use super::error::*;
@@ -42,24 +44,27 @@ pub async fn run_weigh_in<'a>(
         .into_iter()
         .map(|message| {
             if message.author.bot {
-                AssistantMessage {
-                    content: message.content,
-                }
-                .into()
+                None
             } else {
-                UserMessage {
-                    content: message.content,
-                }
-                .into()
+                Some(
+                    UserMessage {
+                        content: message.content,
+                    }
+                    .into(),
+                )
             }
         })
+        .filter_map(identity)
         .collect();
+
+    llm_context.push(SystemMessage {
+        content: "Your purpose is to give your thoughts on these messages. Be brutally honest, and make your response humourous. Never respond with an empty reply. Absolutely under no circumstances start the response with a newline. I REPEAT, DO NOT START THE RESPONSE WITH '\n'".to_string()
+    }.into());
 
     llm_context.reverse();
 
-    llm_context.push(SystemMessage {
-        content: "Give your thoughts on previous messages. Be brutally honest, and make your response humourous.".to_string()
-    }.into());
+    //Remove blank llm defer response
+    llm_context.pop();
 
     Ok(llm_engine
         .get_chat_completion(llm_context)

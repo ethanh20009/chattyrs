@@ -77,13 +77,7 @@ impl LlmEngine {
         let payload = json!({
             "model": self.model,
             "messages": messages,
-            "stream": false,
-            "options": {
-                "seed": 123,
-                "top_k": 20,
-                "top_p": 0.9,
-                "temperature": 0
-            }
+            "stream": false
         });
         println!("{}", payload);
         self.http_client

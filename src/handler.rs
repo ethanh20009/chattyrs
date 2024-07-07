@@ -49,6 +49,8 @@ impl EventHandler for Handler {
                 _ => Err(Error::CommandNotImplemented),
             };
 
+            println!("{:?}", content);
+
             let response_message = match &content {
                 Ok(reply) => reply,
                 Err(err) => {

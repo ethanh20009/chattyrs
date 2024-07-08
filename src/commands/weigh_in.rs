@@ -1,6 +1,9 @@
 use std::convert::identity;
 
-use serenity::all::{CommandInteraction, CreateCommand};
+use serenity::{
+    all::{CommandInteraction, CreateCommand},
+    FutureExt,
+};
 
 use super::error::*;
 use crate::{
@@ -64,11 +67,18 @@ pub async fn run_weigh_in<'a>(
     llm_context.reverse();
 
     //Remove blank llm defer response
-    llm_context.pop();
+    // llm_context.pop();
 
     Ok(llm_engine
         .get_chat_completion(llm_context)
         .await
+        .and_then(|str_response| {
+            if str_response.chars().count().lt(&1_usize) {
+                Err(llm::error::Error::EmptyResponseError)
+            } else {
+                Ok(str_response)
+            }
+        })
         .map_err(Error::from)?)
 }
 

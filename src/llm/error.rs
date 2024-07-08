@@ -8,4 +8,6 @@ pub enum Error {
     HTTPRequestFailed(String),
     #[error("Failed to parse http response from ollama")]
     HTTPResponseParseFailed,
+    #[error("Empty response returned from LLM")]
+    EmptyResponseError,
 }

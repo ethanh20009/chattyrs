@@ -58,7 +58,7 @@ pub async fn run_weigh_in<'a>(
         .collect();
 
     llm_context.push(SystemMessage {
-        content: "Your purpose is to give your thoughts on these messages. Be brutally honest, and make your response humourous. Never respond with an empty reply. Absolutely under no circumstances start the response with a newline. I REPEAT, DO NOT START THE RESPONSE WITH '\n'".to_string()
+        content: "Your purpose is to send a message responding to the other users. Give your own opinion on the matter, take a certain stance. Make your response humourous. Never respond with an empty reply. Absolutely under no circumstances start the response with a newline. I REPEAT, DO NOT START THE RESPONSE WITH '\n'".to_string()
     }.into());
 
     llm_context.reverse();

@@ -1,9 +1,4 @@
-use std::convert::identity;
-
-use serenity::{
-    all::{CommandInteraction, CreateCommand},
-    FutureExt,
-};
+use serenity::all::{CommandInteraction, CreateCommand};
 
 use super::error::*;
 use crate::{
@@ -11,7 +6,7 @@ use crate::{
     llm::{
         self,
         engine::LlmEngine,
-        model::{AssistantMessage, LlmMessage, SystemMessage, UserMessage},
+        model::{LlmMessage, SystemMessage, UserMessage},
     },
 };
 
@@ -43,31 +38,26 @@ pub async fn run_weigh_in<'a>(
         .await
         .map_err(Error::from)?;
 
-    let mut llm_context: Vec<LlmMessage> = latest_messages
+    let compiled_user_messages: LlmMessage = latest_messages
         .into_iter()
-        .map(|message| {
-            if message.author.bot {
-                None
-            } else {
-                Some(
-                    UserMessage {
-                        content: message.content,
-                    }
-                    .into(),
-                )
-            }
-        })
-        .filter_map(identity)
-        .collect();
+        .rev()
+        .filter(|message| !message.author.bot)
+        .fold(
+            UserMessage {
+                content: String::new(),
+            },
+            |mut acc, message| {
+                let user_message = format!("{} said: `{}`\n", message.author.name, message.content);
+                acc.content.push_str(&user_message);
+                acc
+            },
+        )
+        .into();
 
-    llm_context.push(SystemMessage {
-        content: "Your purpose is to send a message responding to the other users. Give your own opinion on the matter, take a certain stance. Make your response humourous. Never respond with an empty reply. Absolutely under no circumstances start the response with a newline. I REPEAT, DO NOT START THE RESPONSE WITH '\n'".to_string()
-    }.into());
-
-    llm_context.reverse();
-
-    //Remove blank llm defer response
-    // llm_context.pop();
+    let system_message = SystemMessage {
+        content: "Your purpose is to send a message responding to the other users. Give your own opinion on the matter, take a certain stance. Make your response humourous. Never respond with an empty reply. Keep your responses length to around a paragraph or a couple of sentences. If a longer answer is strictly judged as needed, break it up with two newlines per paragraph. Pay more attention to the messages at the end of the conversation.".to_string()
+    }.into();
+    let llm_context = vec![system_message, compiled_user_messages];
 
     Ok(llm_engine
         .get_chat_completion(llm_context)

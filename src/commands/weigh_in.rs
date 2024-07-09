@@ -47,7 +47,12 @@ pub async fn run_weigh_in<'a>(
                 content: String::new(),
             },
             |mut acc, message| {
-                let user_message = format!("{} said: `{}`\n", message.author.name, message.content);
+                let user_message = format!(
+                    "({}) {} said: `{}`\n",
+                    message.timestamp.format("%d/%m/%Y %H:%M"),
+                    message.author.name,
+                    message.content
+                );
                 acc.content.push_str(&user_message);
                 acc
             },
@@ -55,8 +60,9 @@ pub async fn run_weigh_in<'a>(
         .into();
 
     let system_message = SystemMessage {
-        content: "Your purpose is to send a message responding to the other users. Give your own opinion on the matter, take a certain stance. Make your response humourous. Never respond with an empty reply. Keep your responses length to around a paragraph or a couple of sentences. If a longer answer is strictly judged as needed, break it up with two newlines per paragraph. Pay more attention to the messages at the end of the conversation.".to_string()
-    }.into();
+        content: environment.llm.system_prompt.to_string(),
+    }
+    .into();
     let llm_context = vec![system_message, compiled_user_messages];
 
     Ok(llm_engine

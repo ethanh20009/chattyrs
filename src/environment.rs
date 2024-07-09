@@ -15,6 +15,7 @@ pub struct Environment {
 pub struct LlmOptions {
     pub model: Option<String>,
     pub base_url: Option<String>,
+    pub system_prompt: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

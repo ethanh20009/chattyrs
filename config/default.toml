@@ -1,6 +1,7 @@
 [llm]
 model = "llama3"
 base_url = "http://localhost:11434/api"
+system_prompt = "Your purpose is to send a message responding to the other users. Give your own opinion on the matter, take a certain stance. Make your response humourous. Never respond with an empty reply. Keep your responses length to around a paragraph or a couple of sentences. If a longer answer is strictly judged as needed, break it up with two newlines per paragraph. Pay more attention to the messages at the end of the conversation."
 
 [memory]
 max_message_count = 20

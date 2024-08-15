@@ -9,6 +9,7 @@ pub struct Environment {
     pub bot_name: String,
     pub llm: LlmOptions,
     pub memory: MemoryOptions,
+    pub vdb: VectorDBOptions,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -16,6 +17,12 @@ pub struct LlmOptions {
     pub model: Option<String>,
     pub base_url: Option<String>,
     pub system_prompt: String,
+    pub embed_model: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct VectorDBOptions {
+    pub base_url: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

@@ -6,6 +6,7 @@ use crate::{
     },
     environment::Environment,
 };
+use serenity::all::Message;
 use serenity::{
     all::{
         CommandInteraction, Context, CreateInteractionResponse, CreateInteractionResponseFollowup,
@@ -19,6 +20,7 @@ pub struct Handler {
     llm_engine: LlmEngine,
     http_client: serenity::http::Http,
     environment: Environment,
+    vec_db_client: 
 }
 
 #[async_trait]
@@ -27,7 +29,18 @@ impl EventHandler for Handler {
     //
     // Event handlers are dispatched through a threadpool, and so multiple events can be
     // dispatched simultaneously.
-    // async fn message(&self, ctx: Context, msg: Message) {}
+    async fn message(&self, ctx: Context, msg: Message) {
+        println!("Recieved message, finding embedding");
+        let embedding = match self.llm_engine.get_embed(&msg.content).await {
+            Ok(embedding) => embedding,
+            Err(err) => {
+                println!("Failed to retrieve embedding, {}", err);
+                return;
+            }
+        };
+
+        println!("Adding message to vec db");
+    }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {

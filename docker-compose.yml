@@ -16,27 +16,26 @@ services:
       - "11434:11434"
     stdin_open: true
     tty: true
-  weaviate:
-    command:
-    - --host
-    - 0.0.0.0
-    - --port
-    - '8080'
-    - --scheme
-    - http
-    image: cr.weaviate.io/semitechnologies/weaviate:1.26.1
+  qdrant:
+    image: qdrant/qdrant:latest
+    # restart: always
+    container_name: qdrant
     ports:
-    - 8080:8080
-    - 50051:50051
+      - 6333:6333
+      - 6334:6334
+    expose:
+      - 6333
+      - 6334
+      - 6335
+    configs:
+      - source: qdrant_config
+        target: /qdrant/config/production.yaml
     volumes:
-    - weaviate_data:/var/lib/weaviate
-    restart: on-failure:0
-    environment:
-      QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      DEFAULT_VECTORIZER_MODULE: 'text2vec-ollama'
-      ENABLE_MODULES: 'text2vec-ollama'
-      CLUSTER_HOSTNAME: 'node1'
+      - qdrant-data:/qdrant/storage
 volumes:
-  weaviate_data:
+  qdrant-data:
+
+configs:
+  qdrant_config:
+    content: |
+      log_level: INFO      

@@ -13,6 +13,7 @@ use crate::environment::Environment;
 pub struct LlmEngine {
     base_url: String,
     model: String,
+    embed_model: String,
     http_client: Client,
 }
 
@@ -30,6 +31,11 @@ struct LlmChatResponse {
     message: AssistantMessage,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct LlmEmbedResponse {
+    embedding: Vec<f64>,
+}
+
 impl LlmEngine {
     pub fn new(environment: &Environment) -> Result<LlmEngine> {
         Ok(LlmEngine {
@@ -38,6 +44,7 @@ impl LlmEngine {
                 .model
                 .clone()
                 .unwrap_or("llama3".to_string()),
+            embed_model: environment.llm.embed_model.clone(),
             base_url: environment
                 .llm
                 .base_url
@@ -47,6 +54,24 @@ impl LlmEngine {
                 .timeout(Duration::from_secs(60))
                 .build()?,
         })
+    }
+
+    pub async fn get_embed(&self, message: impl ToString) -> Result<Vec<f64>> {
+        let message = message.to_string();
+        let payload = json!({
+            "model": self.embed_model,
+            "input": message,
+        });
+        self.http_client
+            .post(format!("{}/embed", self.base_url))
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|err| Error::HTTPRequestFailed(err.to_string()))?
+            .json::<LlmEmbedResponse>()
+            .await
+            .map_err(|_| Error::HTTPResponseParseFailed)
+            .map(|res| res.embedding)
     }
 
     pub async fn get_completion(&self, question: &str) -> Result<String> {

@@ -33,7 +33,7 @@ struct LlmChatResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct LlmEmbedResponse {
-    embedding: Vec<f64>,
+    embedding: Vec<f32>,
 }
 
 impl LlmEngine {
@@ -56,7 +56,7 @@ impl LlmEngine {
         })
     }
 
-    pub async fn get_embed(&self, message: impl ToString) -> Result<Vec<f64>> {
+    pub async fn get_embed(&self, message: impl ToString) -> Result<Vec<f32>> {
         let message = message.to_string();
         let payload = json!({
             "model": self.embed_model,

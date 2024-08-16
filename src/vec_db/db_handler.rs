@@ -6,18 +6,19 @@ use qdrant_client::{
 use crate::environment::Environment;
 use anyhow::{Context, Result};
 
+use super::{vector::DbVector, DB_COLLECTION_NAME, DB_VEC_LENGTH};
+
 pub struct VdbHandler {
     client: Qdrant,
 }
-
-const DB_COLLECTION_NAME: &str = "messages";
-const DB_VEC_LENGTH: u64 = 1024;
 
 impl VdbHandler {
     pub async fn new(env: &Environment) -> Result<Self> {
         let client = Qdrant::from_url(&env.vdb.base_url)
             .build()
             .context("Failed to build qdrant client")?;
+
+        Self::initialise_collection(&client).await?;
 
         Ok(Self { client })
     }
@@ -36,5 +37,19 @@ impl VdbHandler {
                 Ok(())
             }
         }
+    }
+
+    pub async fn add_vector(
+        &self,
+        vector: Vec<f32>,
+        message: impl ToString,
+        message_id: u64,
+    ) -> Result<()> {
+        let db_vec = DbVector::new(vector, message, message_id)?;
+        self.client
+            .upsert_points(db_vec)
+            .await
+            .context("Failed to insert vector into database")
+            .map(|_| ())
     }
 }

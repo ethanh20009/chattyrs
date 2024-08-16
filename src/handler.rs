@@ -1,3 +1,4 @@
+use crate::vec_db::db_handler::VdbHandler;
 use crate::{commands::run_ask, llm::engine::LlmEngine};
 use crate::{
     commands::{
@@ -20,7 +21,7 @@ pub struct Handler {
     llm_engine: LlmEngine,
     http_client: serenity::http::Http,
     environment: Environment,
-    vec_db_client: 
+    vec_db_client: VdbHandler,
 }
 
 #[async_trait]
@@ -40,6 +41,11 @@ impl EventHandler for Handler {
         };
 
         println!("Adding message to vec db");
+        self.vec_db_client
+            .add_vector(embedding, msg.content, msg.id.get())
+            .await
+            .map_err(|err| println!("Error adding vector to database, {}", err))
+            .ok();
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -99,9 +105,11 @@ impl Handler {
     pub fn new(
         environment: &Environment,
         http_client: Http,
+        vec_db_client: VdbHandler,
     ) -> std::result::Result<Handler, crate::error::Error> {
         Ok(Handler {
             llm_engine: LlmEngine::new(environment)?,
+            vec_db_client,
             http_client,
             environment: environment.clone(),
         })

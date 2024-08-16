@@ -1,6 +1,7 @@
 use chattyrs::commands::get_commands;
 use chattyrs::environment::{get_environment, Environment};
 use chattyrs::handler::Handler;
+use chattyrs::vec_db::db_handler::VdbHandler;
 use serenity::all::ApplicationId;
 use serenity::http;
 use serenity::prelude::*;
@@ -28,11 +29,16 @@ async fn main() {
         | GatewayIntents::MESSAGE_CONTENT;
 
     let http = setup_slash_commands(&environment).await;
+    let vec_db_client = VdbHandler::new(&environment)
+        .await
+        .expect("Failed to initialise vector database client");
 
     // Create a new instance of the Client, logging in as a bot. This will automatically prepend
     // your bot token with "Bot ", which is a requirement by Discord for bot users.
     let mut client = Client::builder(&environment.discord_token, intents)
-        .event_handler(Handler::new(&environment, http).expect("Failed to create handler"))
+        .event_handler(
+            Handler::new(&environment, http, vec_db_client).expect("Failed to create handler"),
+        )
         .await
         .expect("Err creating client");
 

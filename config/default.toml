@@ -8,4 +8,4 @@ embed_model = "mxbai-embed-large"
 max_message_count = 20
 
 [vdb]
-base_url = "http://localhost:8080/v1"
+base_url = "http://localhost:6334/v1"

@@ -49,7 +49,7 @@ impl LlmEngine {
                 .llm
                 .base_url
                 .clone()
-                .unwrap_or("http://localhost:11434/api/generate".to_string()),
+                .unwrap_or("http://localhost:11434/api".to_string()),
             http_client: ClientBuilder::default()
                 .timeout(Duration::from_secs(60))
                 .build()?,
@@ -60,17 +60,18 @@ impl LlmEngine {
         let message = message.to_string();
         let payload = json!({
             "model": self.embed_model,
-            "input": message,
+            "prompt": message,
         });
+
         self.http_client
-            .post(format!("{}/embed", self.base_url))
+            .post(format!("{}/embeddings", self.base_url))
             .json(&payload)
             .send()
             .await
             .map_err(|err| Error::HTTPRequestFailed(err.to_string()))?
             .json::<LlmEmbedResponse>()
             .await
-            .map_err(|_| Error::HTTPResponseParseFailed)
+            .map_err(|err| Error::HTTPResponseParseFailed(err.to_string()))
             .map(|res| res.embedding)
     }
 
@@ -94,7 +95,7 @@ impl LlmEngine {
             .map_err(|err| Error::HTTPRequestFailed(err.to_string()))?
             .json::<LlmCompletionResponse>()
             .await
-            .map_err(|_| Error::HTTPResponseParseFailed)
+            .map_err(|err| Error::HTTPResponseParseFailed(err.to_string()))
             .map(|res| res.response)
     }
 
@@ -113,7 +114,7 @@ impl LlmEngine {
             .map_err(|err| Error::HTTPRequestFailed(err.to_string()))?
             .json::<LlmChatResponse>()
             .await
-            .map_err(|_| Error::HTTPResponseParseFailed)
+            .map_err(|err| Error::HTTPResponseParseFailed(err.to_string()))
             .map(|res| res.message.content)
     }
 }

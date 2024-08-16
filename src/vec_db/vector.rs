@@ -6,10 +6,16 @@ pub struct DbVector {
     pub vector: Vec<f32>,
     pub message: String,
     pub message_id: u64,
+    pub guild_id: u64,
 }
 
 impl DbVector {
-    pub fn new(vector: Vec<f32>, message: impl ToString, message_id: u64) -> Result<Self> {
+    pub fn new(
+        vector: Vec<f32>,
+        message: impl ToString,
+        message_id: u64,
+        guild_id: u64,
+    ) -> Result<Self> {
         let message = message.to_string();
         if vector.len() != DB_VEC_LENGTH as usize {
             return Err(anyhow!(
@@ -22,6 +28,7 @@ impl DbVector {
             vector,
             message,
             message_id,
+            guild_id,
         })
     }
 }
@@ -31,7 +38,10 @@ impl From<DbVector> for UpsertPoints {
         let point_struct = PointStruct::new(
             value.message_id,
             value.vector,
-            [("message", value.message.into())],
+            [
+                ("message", value.message.into()),
+                ("guild_id", value.guild_id.to_string().into()),
+            ],
         );
         UpsertPointsBuilder::new(DB_COLLECTION_NAME, vec![point_struct]).build()
     }

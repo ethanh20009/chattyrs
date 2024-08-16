@@ -41,8 +41,15 @@ impl EventHandler for Handler {
         };
 
         println!("Adding message to vec db");
+        let guild_id = if let Some(guild_id) = msg.guild_id {
+            guild_id
+        } else {
+            println!("Error, missing guild id to add to vector database");
+            return;
+        };
+
         self.vec_db_client
-            .add_vector(embedding, msg.content, msg.id.get())
+            .add_vector(embedding, msg.content, msg.id.get(), guild_id.get())
             .await
             .map_err(|err| println!("Error adding vector to database, {}", err))
             .ok();

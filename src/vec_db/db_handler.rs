@@ -44,8 +44,9 @@ impl VdbHandler {
         vector: Vec<f32>,
         message: impl ToString,
         message_id: u64,
+        guild_id: u64,
     ) -> Result<()> {
-        let db_vec = DbVector::new(vector, message, message_id)?;
+        let db_vec = DbVector::new(vector, message, message_id, guild_id)?;
         self.client
             .upsert_points(db_vec)
             .await

@@ -1,5 +1,7 @@
 use qdrant_client::{
-    qdrant::{CreateCollectionBuilder, ListCollectionsResponse, VectorParamsBuilder},
+    qdrant::{
+        CreateCollectionBuilder, ListCollectionsResponse, SearchPointsBuilder, VectorParamsBuilder,
+    },
     Qdrant,
 };
 
@@ -52,5 +54,21 @@ impl VdbHandler {
             .await
             .context("Failed to insert vector into database")
             .map(|_| ())
+    }
+
+    pub async fn get_close_vectors(&self, vector: Vec<f32>) -> Result<Vec<DbVector>> {
+        let search_request = SearchPointsBuilder::new(DB_COLLECTION_NAME, vector, 10)
+            .with_payload(true)
+            .with_vectors(true);
+        self.client
+            .search_points(search_request)
+            .await
+            .context("Failed to search nearby vectors")
+            .map(|res| {
+                res.result
+                    .into_iter()
+                    .map(|point| point.try_into())
+                    .collect::<Result<Vec<DbVector>>>()
+            })?
     }
 }

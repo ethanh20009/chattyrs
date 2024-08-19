@@ -67,6 +67,7 @@ impl EventHandler for Handler {
                     run_weigh_in(
                         &command,
                         &self.llm_engine,
+                        &self.vec_db_client,
                         &self.http_client,
                         &self.environment,
                     )

@@ -8,6 +8,7 @@ use crate::{
         engine::LlmEngine,
         model::{LlmMessage, SystemMessage, UserMessage},
     },
+    vec_db::db_handler::VdbHandler,
 };
 
 pub fn register_weigh_in(environment: &Environment) -> CreateCommand {
@@ -19,6 +20,7 @@ pub fn register_weigh_in(environment: &Environment) -> CreateCommand {
 pub async fn run_weigh_in<'a>(
     command: &CommandInteraction,
     llm_engine: &'a LlmEngine,
+    vec_db_client: &'a VdbHandler,
     http_client: &serenity::http::Http,
     environment: &Environment,
 ) -> Result<String> {
@@ -78,10 +80,29 @@ pub async fn run_weigh_in<'a>(
         .map_err(Error::from)?)
 }
 
+async fn find_near_messages<'a>(
+    message: impl ToString,
+    llm_engine: &'a LlmEngine,
+    vec_db_client: &'a VdbHandler,
+) -> Result<Vec<String>> {
+    let message = message.to_string();
+    let embedding = llm_engine.get_embed(message).await.map_err(Error::from)?;
+    let close_messages = vec_db_client
+        .get_close_vectors(embedding)
+        .await
+        .map_err(Error::VectorDB)?;
+    Ok(close_messages
+        .into_iter()
+        .map(|point| point.message)
+        .collect())
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("failed to retrieve latest_messages, {0}")]
     GetChannelFailed(#[from] serenity::Error),
     #[error("failed to retrieve response from llm, {0}")]
     LlmError(#[from] llm::error::Error),
+    #[error("Failed to retrieve response from vector database client.\n{0}")]
+    VectorDB(anyhow::Error),
 }

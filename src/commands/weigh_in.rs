@@ -1,3 +1,4 @@
+use serde_json::error;
 use serenity::all::{CommandInteraction, CreateCommand};
 
 use super::error::*;
@@ -40,7 +41,7 @@ pub async fn run_weigh_in<'a>(
         .await
         .map_err(Error::from)?;
 
-    let compiled_user_messages: LlmMessage = latest_messages
+    let user_messages: UserMessage = latest_messages
         .into_iter()
         .rev()
         .filter(|message| !message.author.bot)
@@ -58,11 +59,18 @@ pub async fn run_weigh_in<'a>(
                 acc.content.push_str(&user_message);
                 acc
             },
-        )
-        .into();
+        );
+    let relevant_messages =
+        find_near_messages(&user_messages.content, llm_engine, vec_db_client).await?;
+
+    let compiled_user_messages = user_messages.into();
 
     let system_message = SystemMessage {
-        content: environment.llm.system_prompt.to_string(),
+        content: environment.llm.system_prompt.to_string()
+            + "\n"
+            + generate_relevant_message_prompt(relevant_messages)
+                .unwrap_or("".to_string())
+                .as_str(),
     }
     .into();
     let llm_context = vec![system_message, compiled_user_messages];
@@ -81,7 +89,7 @@ pub async fn run_weigh_in<'a>(
 }
 
 async fn find_near_messages<'a>(
-    message: impl ToString,
+    message: &'a str,
     llm_engine: &'a LlmEngine,
     vec_db_client: &'a VdbHandler,
 ) -> Result<Vec<String>> {
@@ -95,6 +103,10 @@ async fn find_near_messages<'a>(
         .into_iter()
         .map(|point| point.message)
         .collect())
+}
+
+fn generate_relevant_message_prompt(messages: Vec<String>) -> Option<String> {
+    Some(format!( "Using RAG retrieval, the following messages may or may not contain relevant information of messages that were sent in the past.\nRETRIEVED_MESSAGES\n{}\nEND_OF_RETRIEVED_MESSAGES", messages.into_iter().reduce(|acc, msg| acc + "\n" + &msg)?))
 }
 
 #[derive(Debug, thiserror::Error)]

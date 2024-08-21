@@ -60,8 +60,18 @@ pub async fn run_weigh_in<'a>(
                 acc
             },
         );
-    let relevant_messages =
-        find_near_messages(&user_messages.content, llm_engine, vec_db_client).await?;
+    let relevant_messages = find_near_messages(
+        &user_messages.content,
+        command
+            .guild_id
+            .ok_or(Error::MissingGuildID)?
+            .get()
+            .to_string()
+            .as_str(),
+        llm_engine,
+        vec_db_client,
+    )
+    .await?;
 
     let compiled_user_messages = user_messages.into();
 
@@ -90,13 +100,14 @@ pub async fn run_weigh_in<'a>(
 
 async fn find_near_messages<'a>(
     message: &'a str,
+    guild_id: &str,
     llm_engine: &'a LlmEngine,
     vec_db_client: &'a VdbHandler,
 ) -> Result<Vec<String>> {
     let message = message.to_string();
     let embedding = llm_engine.get_embed(message).await.map_err(Error::from)?;
     let close_messages = vec_db_client
-        .get_close_vectors(embedding)
+        .get_close_vectors(embedding, guild_id)
         .await
         .map_err(Error::VectorDB)?;
     Ok(close_messages
@@ -117,4 +128,6 @@ pub enum Error {
     LlmError(#[from] llm::error::Error),
     #[error("Failed to retrieve response from vector database client.\n{0}")]
     VectorDB(anyhow::Error),
+    #[error("Command missing guild_id. It's likely the command was run from within dms.")]
+    MissingGuildID,
 }

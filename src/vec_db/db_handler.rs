@@ -1,6 +1,7 @@
 use qdrant_client::{
     qdrant::{
-        CreateCollectionBuilder, ListCollectionsResponse, SearchPointsBuilder, VectorParamsBuilder,
+        Condition, CreateCollectionBuilder, Filter, ListCollectionsResponse, SearchPointsBuilder,
+        VectorParamsBuilder,
     },
     Qdrant,
 };
@@ -56,9 +57,18 @@ impl VdbHandler {
             .map(|_| ())
     }
 
-    pub async fn get_close_vectors(&self, vector: Vec<f32>) -> Result<Vec<DbVector>> {
+    pub async fn get_close_vectors(
+        &self,
+        vector: Vec<f32>,
+        guild_id: &str,
+    ) -> Result<Vec<DbVector>> {
+        let filter = Filter::must(vec![Condition::matches_text(
+            "guild_id",
+            guild_id.to_string(),
+        )]);
         let search_request = SearchPointsBuilder::new(DB_COLLECTION_NAME, vector, 10)
             .with_payload(true)
+            .filter(filter)
             .with_vectors(true);
         self.client
             .search_points(search_request)
